@@ -1,2 +1,4 @@
 my_info.txt
 .venv/
+.vscode/
+system_service.txt

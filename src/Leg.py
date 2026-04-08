@@ -1,16 +1,16 @@
 import IK
 import path
 import numpy as np
+from abc import ABC, abstractmethod
 
-class Leg:
-  def __init__(self,board,angle,coxa,femur,tibia,side):
-    self.board = board
-    self.angle = angle
+class Leg(ABC):
+  def __init__(self,board,angle,coxa,femur,tibia):
+    self.board = board #control board the leg is attached to.
+    self.angle = angle #angle of leg relative to the side its on, perpendicular to the body is 0, positive is front, negative is back.
     self.offsetAngle = 0
     self.coxa = self.board.servo[coxa]
     self.femur = self.board.servo[femur]
     self.tibia = self.board.servo[tibia]
-    self.side = side
     self.path = [np.array((0,0,0))]
     self.tempPath = [np.array((0,0,0))]
     self.rest = [0,0,0]
@@ -39,8 +39,6 @@ class Leg:
       angle = 270
     elif x < 0:
       angle = 90
-    if self.side == 'left':
-      angle = -angle
 
     self.offsetAngle=angle
   
@@ -81,11 +79,14 @@ class Leg:
       self.tempPath = path.getPath(self.location,self.path[self.index],step)
       self.tempIndex = 0
       self.tempComplete = False
+  
+  @abstractmethod
+  def setServoAngles(self, point):
+    pass
 
   def update(self, ready):
     p = None
     i = 0
-    print(self.offsetAngle)
     #Return if no path or index is out of bounds or only 1 point
     if not self.path or self.index >= len(self.path) or len(self.path)<=1:
       return
@@ -102,15 +103,8 @@ class Leg:
       p = self.path
       i = self.index
 
-    #Set angles based on what side its on
-    if(self.side == "left"):
-      self.coxa.angle = IK.getCoxaAngleLeft(p[i])
-      self.femur.angle = IK.getFemurAngleLeft(p[i])
-      self.tibia.angle = IK.getTibiaAngleLeft(p[i])
-    if(self.side == "right"):
-      self.coxa.angle = IK.getCoxaAngleRight(p[i])
-      self.femur.angle = IK.getFemurAngleRight(p[i])
-      self.tibia.angle = IK.getTibiaAngleRight(p[i])
+    #Set servo angles to current point
+    self.setServoAngles(p[i])
 
     #Set current location to current point
     self.location = p[i]
@@ -126,6 +120,23 @@ class Leg:
       if(self.index >= len(self.path) and self.isCyclic):
         self.index = 0
 
+class LeftLeg(Leg):
+  def setOffsetAngle(self, x, y):
+    super().setOffsetAngle(x, y)
+    self.offsetAngle = -self.offsetAngle
+
+  def setServoAngles(self, point):
+    self.coxa.angle = IK.getCoxaAngleLeft(point)
+    self.femur.angle = IK.getFemurAngleLeft(point)
+    self.tibia.angle = IK.getTibiaAngleLeft(point)
+
+class RightLeg(Leg):
+  def setServoAngles(self, point):
+    self.coxa.angle = IK.getCoxaAngleRight(point)
+    self.femur.angle = IK.getFemurAngleRight(point)
+    self.tibia.angle = IK.getTibiaAngleRight(point)
+
+#==========================================================================================#
 def rotateAboutCenter(self,start,location,end):
    if(location[0] == start[0] and location[1] == start[1]): return start,end,location
    center = np.array(tuple((a + b) / 2 for a, b in zip(start, end)))

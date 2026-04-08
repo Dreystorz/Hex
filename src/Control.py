@@ -82,9 +82,14 @@ while not stop:
         hex.setDefaultRestTime()
         hex.returnToRest()
 
-    dVector = (int(abs_states.get(ecodes.ABS_RX, 0)),int(abs_states.get(ecodes.ABS_RY, 0)))
-    if(dVector):
-        hex.walk(dVector)
+    directionVector = (int(abs_states.get(ecodes.ABS_RX, 0)),int(abs_states.get(ecodes.ABS_RY, 0)))
+    if(directionVector):
+        hex.walk(directionVector)
+
+    rotateVector = (int(abs_states.get(ecodes.ABS_X, 0)))
+    if(rotateVector):
+        remap = int((rotateVector-128)/128*10)
+        hex.rotate(remap)
 
     hex.update()
 
