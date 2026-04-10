@@ -1,6 +1,6 @@
 from evdev import InputDevice, categorize, ecodes
 from threading import Thread
-from Hexapod import Hexapod
+from Hexapod import HexState, Hexapod
 import atexit
 import board
 import digitalio
@@ -47,12 +47,13 @@ ABS_NAMES = {
 }
 
 def shut_down():
-    hex.returnToRest()
-    hex.setDefaultRestTime()
+    time.sleep(0.5)
+    hex.set_state(HexState.IDLE)
     i = 0
     while i < hex.maxIndex:
         hex.update()
         i = i+1
+    time.sleep(0.5)
 
 def reader():
     for event in device.read_loop():
@@ -65,32 +66,26 @@ atexit.register(shut_down)
 Thread(target=reader, daemon=True).start()
 hex = Hexapod()
 while not stop:
+    hex.update()
     ps = key_states.get(ecodes.BTN_MODE, 0)
     if ps == 1:
         stop = True
 
     stand = key_states.get(ecodes.BTN_SOUTH, 0)
     if stand == 1:
-        hex.setDefaultRestTime()
-        hex.stand()
+        hex.set_state(HexState.STANDING)
 
     amount = abs_states.get(ecodes.ABS_HAT0Y, 0)
     hex.adjustHeight(-amount)
 
     sit = key_states.get(ecodes.BTN_NORTH, 0)
     if sit == 1:
-        hex.setDefaultRestTime()
-        hex.returnToRest()
+        hex.set_state(HexState.IDLE)
 
     directionVector = (int(abs_states.get(ecodes.ABS_RX, 0)),int(abs_states.get(ecodes.ABS_RY, 0)))
-    if(directionVector):
-        hex.walk(directionVector)
+    hex.setDirectionVector(directionVector)
 
-    rotateVector = (int(abs_states.get(ecodes.ABS_X, 0)))
-    if(rotateVector):
-        remap = int((rotateVector-128)/128*10)
-        hex.rotate(remap)
-
-    hex.update()
+    rotateVelocity = (int(abs_states.get(ecodes.ABS_X, 0)))
+    hex.setRotationVelocity(rotateVelocity)
 
 
