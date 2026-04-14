@@ -1,6 +1,7 @@
-from evdev import InputDevice, categorize, ecodes
-from threading import Thread
+from evdev import InputDevice, ecodes
+from threading import Thread, Lock
 from Hexapod import HexState, Hexapod
+from Command import Command
 import atexit
 import board
 import digitalio
@@ -16,6 +17,7 @@ stopServos.value = False
 # Initialize state holders
 key_states = {}
 abs_states = {}
+lock = Lock()
 
 # Mapping known button/axis names for better display
 KEY_NAMES = {
@@ -58,34 +60,39 @@ def shut_down():
 def reader():
     for event in device.read_loop():
         if event.type == ecodes.EV_KEY:
-            key_states[event.code] = event.value
+            with lock:
+                key_states[event.code] = event.value
         elif event.type == ecodes.EV_ABS:
-            abs_states[event.code] = event.value
+            with lock:
+                abs_states[event.code] = event.value
 
 atexit.register(shut_down)
 Thread(target=reader, daemon=True).start()
 hex = Hexapod()
+cmd = Command()
 while not stop:
-    hex.update()
-    ps = key_states.get(ecodes.BTN_MODE, 0)
-    if ps == 1:
-        stop = True
+    with lock:
+        ps = key_states.get(ecodes.BTN_MODE, 0)
+        if ps == 1:
+            stop = True
+        stand = key_states.get(ecodes.BTN_SOUTH, 0)
+        amount = abs_states.get(ecodes.ABS_HAT0Y, 0)
+        sit = key_states.get(ecodes.BTN_NORTH, 0)
+        direction_vector = (int(abs_states.get(ecodes.ABS_RX, 0)),int(abs_states.get(ecodes.ABS_RY, 0)))
+        rotate_direction = (int(abs_states.get(ecodes.ABS_X, 0)))
 
-    stand = key_states.get(ecodes.BTN_SOUTH, 0)
-    if stand == 1:
-        hex.set_state(HexState.STANDING)
+    cmd.read_controller_input(direction_vector[0], direction_vector[1], rotate_direction, amount, sit, stand)
+    cmd.print()
+    hex.update(cmd)
+    time.sleep(0.1)
+    # if stand == 1:
+    #     hex.set_state(HexState.STANDING)
 
-    amount = abs_states.get(ecodes.ABS_HAT0Y, 0)
-    hex.adjustHeight(-amount)
+    # hex.adjustHeight(-amount)
 
-    sit = key_states.get(ecodes.BTN_NORTH, 0)
-    if sit == 1:
-        hex.set_state(HexState.IDLE)
+    # if sit == 1:
+    #     hex.set_state(HexState.IDLE)
 
-    directionVector = (int(abs_states.get(ecodes.ABS_RX, 0)),int(abs_states.get(ecodes.ABS_RY, 0)))
-    hex.setDirectionVector(directionVector)
+    # hex.setDirectionVector(direction_vector)
 
-    rotateVelocity = (int(abs_states.get(ecodes.ABS_X, 0)))
-    hex.setRotationVelocity(rotateVelocity)
-
-
+    # hex.setRotationVelocity(rotate_direction)

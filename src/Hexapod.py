@@ -56,6 +56,7 @@ class Hexapod:
     self.restTime = 0.03
     self.directionVector = (0,0)
     self.rotationVelocity = 0
+    self.phase = 0
 
   def setDirectionVector(self, directionVector):
     if not directionVector:
@@ -73,7 +74,7 @@ class Hexapod:
     if not rotationVelocity:
       self.rotationVelocity = 0
       return
-    self.rotationVelocity = int((rotationVelocity-128)/128*10)
+    self.rotationVelocity = int((rotationVelocity-128)/128*10) #Error, goes to zero if < -9.
 
   def set_state(self, new_state):
     if not self.isValidStateChange(new_state):
@@ -156,17 +157,19 @@ class Hexapod:
     if(y != 0 or x != 0):
       start = (80,-45,-self.height)
       end = (80,45,-self.height)
-      self.L1.createPath(start,end,5,cycle=0.0,isCyclic=True,height2=stepHeight)
-      self.L2.createPath(start,end,5,cycle=0.5,isCyclic=True,height2=stepHeight)
-      self.L3.createPath(start,end,5,cycle=0.0,isCyclic=True,height2=stepHeight)
-      self.R1.createPath(start,end,5,cycle=0.5,isCyclic=True,height2=stepHeight)
-      self.R2.createPath(start,end,5,cycle=0.0,isCyclic=True,height2=stepHeight)
-      self.R3.createPath(start,end,5,cycle=0.5,isCyclic=True,height2=stepHeight)
+      self.L1.createPath(start,end,5,cycle=(0.0+self.phase)%1,isCyclic=True,height2=stepHeight)
+      self.L2.createPath(start,end,5,cycle=(0.5+self.phase)%1,isCyclic=True,height2=stepHeight)
+      self.L3.createPath(start,end,5,cycle=(0.0+self.phase)%1,isCyclic=True,height2=stepHeight)
+      self.R1.createPath(start,end,5,cycle=(0.5+self.phase)%1,isCyclic=True,height2=stepHeight)
+      self.R2.createPath(start,end,5,cycle=(0.0+self.phase)%1,isCyclic=True,height2=stepHeight)
+      self.R3.createPath(start,end,5,cycle=(0.5+self.phase)%1,isCyclic=True,height2=stepHeight)
+
+    self.moveLegs()
 
   def handle_rotation(self):
     pass
 
-  def update(self):
+  def update(self, cmd):
     if self.state == HexState.IDLE:
       self.handle_idle()
     if self.state == HexState.STANDING:
@@ -177,6 +180,10 @@ class Hexapod:
       self.handle_rotation()
 
     self.moveLegs()
+    if self.phase == 1:
+      self.phase = 0
+    else:
+      self.phase = self.phase + (1/self.maxIndex)
     time.sleep(self.restTime)
 
   def moveLegs(self):
