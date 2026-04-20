@@ -2,3 +2,5 @@ my_info.txt
 .venv/
 .vscode/
 system_service.txt
+pycache/
+__pycache__

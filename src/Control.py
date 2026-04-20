@@ -13,6 +13,7 @@ stop = False
 stopServos = digitalio.DigitalInOut(board.D4)
 stopServos.direction = digitalio.Direction.OUTPUT
 stopServos.value = False
+SLEEP_TIME = 0.001
 
 # Initialize state holders
 key_states = {}
@@ -80,7 +81,7 @@ while not stop:
     cmd.read_controller_input(direction_vector[0], direction_vector[1], rotate_direction, change_height, sit, stand)
     cmd.print()
     hex.update(cmd)
-    time.sleep(0.1)
+    time.sleep(SLEEP_TIME)
     # if stand == 1:
     #     hex.set_state(HexState.STANDING)
 

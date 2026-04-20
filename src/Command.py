@@ -14,7 +14,8 @@ class Command:
     self.sit_pressed = False
 
   def print(self):
-    print(f"Move X: {self.move_x}, Move Y: {self.move_y}, Rotate: {self.rotate}, Height: {self.height}, Stand: {self.stand_pressed}, Sit: {self.sit_pressed}")
+    pass
+    #print(f"Move X: {self.move_x}, Move Y: {self.move_y}, Rotate: {self.rotate}, Height: {self.height}, Stand: {self.stand_pressed}, Sit: {self.sit_pressed}")
 
   def read_controller_input(self, raw_x, raw_y, rotate, height_change, sit, stand):
     # Parse the raw command and update the command attributes

@@ -3,43 +3,27 @@ import math
 coxaLength = 39.9
 femurLength = 110.0
 tibiaLength = 157.5
-# restOffsetX = 70
-# restOffsetZ = -7
-restOffsetX = 0
-restOffsetZ = 0
 
-def getTibiaAngle(x,y,z):
-  a = femurLength
-  b = tibiaLength
-  x = restOffsetX+x
-  z = restOffsetZ+z
-  k = math.sqrt((y*y)+(x*x))
-  h = math.sqrt((k*k)+(z*z))
-  angle = math.acos(((a*a)+(b*b)-(h*h))/(2*b*a))
-  angle = math.degrees(angle)
-  return angle
+def calculate_l(x, y, z):
+    L1 = math.sqrt(x**2 + y**2)
+    return math.sqrt(z**2 + (L1 - coxaLength)**2)
 
-def getFemurAngle(x,y,z):
-  a = femurLength
-  b = tibiaLength
-  x = restOffsetX+x
-  z = restOffsetZ+z
-  if(x == 0):
-    return 90
-  k = math.sqrt((y*y)+(x*x))
-  h = math.sqrt((k*k)+(z*z))
-  angle = math.acos(((h*h)+(a*a)-(b*b))/(2*h*a))+math.atan(z/k)
-  angle = math.degrees(angle)
-  return  angle
+def calculate_coxa_angle(x, y):
+    return math.atan2(x, y)
 
-def getCoxaAngle(x,y):
-  x = restOffsetX+x
-  angle = math.atan(y/x)
-  angle = 90-math.degrees(angle)
-  return angle
+def calculate_femur_angle(x, y, z):
+    L = calculate_l(x, y, z)
+    alpha1 = math.acos(z/L)
+    alpha2 = math.acos((tibiaLength**2 - femurLength**2 - L**2) / (-2 * femurLength * L))
+    return alpha1 + alpha2
 
-def getAngles(x,y,z,offset):
-  coxaAngle = getCoxaAngle(x,y)-offset
-  femurAngle = getFemurAngle(x,y,z)
-  tibiaAngle = getTibiaAngle(x,y,z)
+def calculate_tibia_angle(x, y, z):
+    L = calculate_l(x, y, z)
+    return math.acos((L**2 - tibiaLength**2 - femurLength**2)/(-2 * femurLength * tibiaLength))
+
+
+def getAngles(x,y,z):
+  coxaAngle = math.degrees(calculate_coxa_angle(x, y))
+  femurAngle = math.degrees(calculate_femur_angle(x, y, z))
+  tibiaAngle = math.degrees(calculate_tibia_angle(x, y, z))
   return coxaAngle, femurAngle, tibiaAngle

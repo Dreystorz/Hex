@@ -1,6 +1,7 @@
 from Leg import Leg
 from adafruit_servokit import ServoKit
 from enum import Enum, auto
+from Config import LEG_CONFIG, LEG_HOME_POSITION
 
 class HexState(Enum):
   SITTING_IDLE = auto()
@@ -40,18 +41,18 @@ class Hexapod:
     self.right.servo[14].set_pulse_width_range(500,2300)#5t
 
     #Leg initialization, the parameters are (kit,coxaChannel,femurChannel,tibiaChannel,offsetAngle).
-    self.Legs = [Leg(self.left,35,3,2,1), 
-                 Leg(self.left,0,11,10,9), 
-                 Leg(self.left,-35,15,14,13), 
-                 Leg(self.right,35,0,1,2), 
-                 Leg(self.right,0,4,5,6), 
-                 Leg(self.right,-35,12,13,14)]
+    self.Legs = [Leg(self.left,3,2,1,LEG_CONFIG["LEFT_FRONT"],LEG_HOME_POSITION["LEFT_FRONT"]),
+                 Leg(self.left,11,10,9,LEG_CONFIG["LEFT_MIDDLE"],LEG_HOME_POSITION["LEFT_MIDDLE"]),
+                 Leg(self.left,15,14,13,LEG_CONFIG["LEFT_BACK"],LEG_HOME_POSITION["LEFT_BACK"]),
+                 Leg(self.right,0,1,2,LEG_CONFIG["RIGHT_FRONT"],LEG_HOME_POSITION["RIGHT_FRONT"]),
+                 Leg(self.right,4,5,6,LEG_CONFIG["RIGHT_MIDDLE"],LEG_HOME_POSITION["RIGHT_MIDDLE"]),
+                 Leg(self.right,12,13,14,LEG_CONFIG["RIGHT_BACK"],LEG_HOME_POSITION["RIGHT_BACK"])]
 
     self.state = HexState.SITTING_IDLE
     self.prev_state = None
 
-    self.height = 80
-    self.phase_increment = 0.01
+    self.height = 0
+    self.phase_increment = 0.001
     self.phase = 0
 
   def set_state(self, new_state):
@@ -93,11 +94,16 @@ class Hexapod:
       self.set_state(HexState.STANDING_UP)
 
   def handle_standing_up(self, cmd):
+    y = 0
+    if(self.phase < 0.5):
+      y = (self.phase*400)-100
+    else:
+      y = (self.phase*-400)+300
     if cmd.sit_pressed:
       self.set_state(HexState.SITTING_DOWN)
     else:
       for leg in self.Legs:
-        leg.set_position(120, 0, self.height)
+        leg.set_position(200, y, 50)
 
   def handle_standing_idle(self, cmd):
     self.phase = 0
