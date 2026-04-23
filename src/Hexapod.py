@@ -2,6 +2,7 @@ from Leg import Leg
 from adafruit_servokit import ServoKit
 from enum import Enum, auto
 from Config import LEG_CONFIG
+from Movement_config import START_POSITION
 
 class HexState(Enum):
   SITTING_IDLE = auto()
@@ -41,18 +42,18 @@ class Hexapod:
     self.right.servo[14].set_pulse_width_range(500,2300)#5t
 
     #Leg initialization, the parameters are (kit,coxaChannel,femurChannel,tibiaChannel,offsetAngle).
-    self.Legs = [Leg(self.left,3,2,1,LEG_CONFIG["LEFT_FRONT"]),
-                 Leg(self.left,11,10,9,LEG_CONFIG["LEFT_MIDDLE"]),
-                 Leg(self.left,15,14,13,LEG_CONFIG["LEFT_BACK"]),
-                 Leg(self.right,0,1,2,LEG_CONFIG["RIGHT_FRONT"]),
-                 Leg(self.right,4,5,6,LEG_CONFIG["RIGHT_MIDDLE"]),
-                 Leg(self.right,12,13,14,LEG_CONFIG["RIGHT_BACK"])]
+    self.Legs = [Leg(self.left,3,2,1,LEG_CONFIG["LEFT_FRONT"],"L1"),
+                 Leg(self.left,11,10,9,LEG_CONFIG["LEFT_MIDDLE"],"L2"),
+                 Leg(self.left,15,14,13,LEG_CONFIG["LEFT_BACK"],"L3"),
+                 Leg(self.right,0,1,2,LEG_CONFIG["RIGHT_FRONT"],"R1"),
+                 Leg(self.right,4,5,6,LEG_CONFIG["RIGHT_MIDDLE"],"R2"),
+                 Leg(self.right,12,13,14,LEG_CONFIG["RIGHT_BACK"],"R3")]
 
     self.state = HexState.SITTING_IDLE
     self.prev_state = None
 
-    self.height = 0
-    self.phase_increment = 0.001
+    self.height = 70
+    self.phase_increment = 0.01
     self.phase = 0
 
   def set_state(self, new_state):
@@ -79,7 +80,10 @@ class Hexapod:
     return True
   
   def on_enter(self, state):
-    pass
+    if state == HexState.STANDING_UP:
+      self.phase = 0
+    if state == HexState.SITTING_DOWN:
+      self.phase = 0
 
   def on_exit(self, state):
     pass
@@ -92,21 +96,40 @@ class Hexapod:
   def handle_sitting_down(self, cmd):
     if cmd.stand_pressed:
       self.set_state(HexState.STANDING_UP)
+      return
+    if round(self.phase, 4) == 1.0:
+      self.set_state(HexState.SITTING_IDLE)
+      return
+    for leg in self.Legs:
+      if self.phase < 0.5:
+        x = 0
+        y = 0
+        z = (0.5-self.phase)*(self.height*2)
+      else:
+        x = (self.phase-0.5)*(START_POSITION[leg.name][0]*2)
+        y = (self.phase-0.5)*(START_POSITION[leg.name][1]*2)
+        z = (self.phase-0.5)*(START_POSITION[leg.name][2]*2)
+      leg.set_position(x, y, z)
 
   def handle_standing_up(self, cmd):
-    y = 0
-    if(self.phase < 0.5):
-      y = (self.phase*200)-50
-    else:
-      y = (self.phase*-200)+150
     if cmd.sit_pressed:
       self.set_state(HexState.SITTING_DOWN)
-    else:
-      for leg in self.Legs:
-        leg.set_position(0, 0, 0)
+      return
+    if round(self.phase, 4) == 1.0:
+      self.set_state(HexState.STANDING_IDLE)
+      return
+    for leg in self.Legs:
+      if self.phase < 0.5:
+        x = (0.5-self.phase)*(START_POSITION[leg.name][0]*2)
+        y = (0.5-self.phase)*(START_POSITION[leg.name][1]*2)
+        z = (0.5-self.phase)*(START_POSITION[leg.name][2]*2)
+      else:
+        x = 0
+        y = 0
+        z = (self.phase-0.5)*(self.height*2)
+      leg.set_position(x, y, z)
 
   def handle_standing_idle(self, cmd):
-    self.phase = 0
     if cmd.sit_pressed:
       self.set_state(HexState.SITTING_DOWN)
     elif cmd.move_x != 0 or cmd.move_y != 0:
@@ -136,7 +159,7 @@ class Hexapod:
 
   def update(self, cmd):
     self.handle_state(cmd)
-    self.phase += self.phase_increment
     self.phase = self.phase % 1
+    self.phase += self.phase_increment
 
   # x = out, y = side, z = height

@@ -13,7 +13,7 @@ stop = False
 stopServos = digitalio.DigitalInOut(board.D4)
 stopServos.direction = digitalio.Direction.OUTPUT
 stopServos.value = False
-SLEEP_TIME = 0.001
+SLEEP_TIME = 0.01
 
 # Initialize state holders
 key_states = {}
